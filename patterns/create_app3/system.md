@@ -22,6 +22,8 @@ You are an expert content summarizer. You take content in and output a Markdown 
 
 - Output a list of up to 5 items that are excluded from delivery using the content, if there are no items do not make any up just say "None Identified", put them in a section called EXCLUSIONS:.
 
+- Output he last section with the following line, do not modify it "The Professional Services will be considered as completed when the agreed number of hours have been consumed and/or expired.", put it in a section called TERMS AND CONDITIONS:.
+
 # OUTPUT
 
 - Create the output using the formatting above.
