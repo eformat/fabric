@@ -1,8 +1,9 @@
-name: Go Build and Release
+name: Go Release
 
 on:
+  repository_dispatch:
+    types: [tag_created]
   push:
-    branches: ["main"]
     tags:
       - "v*"
 
@@ -15,6 +16,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -40,6 +43,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -64,7 +69,7 @@ jobs:
           GOOS: ${{ env.OS }}
           GOARCH: ${{ matrix.arch }}
         run: |
-          go build -o fabric-${OS}-${{ matrix.arch }}-${{ github.ref_name }} .
+          go build -o fabric-${OS}-${{ matrix.arch }} .
 
       - name: Build binary on Windows
         if: matrix.os == 'windows-latest'
@@ -72,15 +77,57 @@ jobs:
           GOOS: windows
           GOARCH: ${{ matrix.arch }}
         run: |
-          go build -o fabric-${OS}-${{ matrix.arch }}-${{ github.ref_name }} .
+          go build -o fabric-windows-${{ matrix.arch }}.exe .
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v3
+        if: matrix.os != 'windows-latest'
+        uses: actions/upload-artifact@v4
         with:
-          name: fabric-${{ env.OS }}-${{ matrix.arch }}-${{ github.ref_name }}
-          path: fabric-${{ env.OS }}-${{ matrix.arch }}-${{ github.ref_name }}
+          name: fabric-${OS}-${{ matrix.arch }}
+          path: fabric-${OS}-${{ matrix.arch }}
+
+      - name: Upload build artifact
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: fabric-windows-${{ matrix.arch }}.exe
+          path: fabric-windows-${{ matrix.arch }}.exe
+
+      - name: Get latest tag
+        if: matrix.os != 'windows-latest'
+        id: get_latest_tag
+        run: |
+          latest_tag=$(git tag --sort=-creatordate | head -n 1)
+          echo "latest_tag=$latest_tag" >> $GITHUB_ENV
+
+      - name: Get latest tag
+        if: matrix.os == 'windows-latest'
+        id: get_latest_tag_windows
+        run: |
+          $latest_tag = git tag --sort=-creatordate | Select-Object -First 1
+          Add-Content -Path $env:GITHUB_ENV -Value "latest_tag=$latest_tag"
+
+      - name: Create release if it doesn't exist
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if ! gh release view ${{ env.latest_tag }} >/dev/null 2>&1; then
+            gh release create ${{ env.latest_tag }} --title "Release ${{ env.latest_tag }}" --notes "Automated release for ${{ env.latest_tag }}"
+          else
+            echo "Release ${{ env.latest_tag }} already exists."
+          fi
 
       - name: Upload release artifact
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        if: matrix.os == 'windows-latest'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload ${{ github.ref_name }} fabric-${{ env.OS }}-${{ matrix.arch }}-${{ github.ref_name }}
+          gh release upload ${{ env.latest_tag }} fabric-windows-${{ matrix.arch }}.exe
+
+      - name: Upload release artifact
+        if: matrix.os != 'windows-latest'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ env.latest_tag }} fabric-${OS}-${{ matrix.arch }}

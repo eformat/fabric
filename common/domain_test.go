@@ -1,23 +1,25 @@
 package common
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/danielmiessler/fabric/chat"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNormalizeMessages(t *testing.T) {
-	msgs := []*Message{
-		{Role: "user", Content: "Hello"},
-		{Role: "bot", Content: "Hi there!"},
-		{Role: "bot", Content: ""},
-		{Role: "user", Content: ""},
-		{Role: "user", Content: "How are you?"},
+	msgs := []*chat.ChatCompletionMessage{
+		{Role: chat.ChatMessageRoleUser, Content: "Hello"},
+		{Role: chat.ChatMessageRoleAssistant, Content: "Hi there!"},
+		{Role: chat.ChatMessageRoleUser, Content: ""},
+		{Role: chat.ChatMessageRoleUser, Content: ""},
+		{Role: chat.ChatMessageRoleUser, Content: "How are you?"},
 	}
 
-	expected := []*Message{
-		{Role: "user", Content: "Hello"},
-		{Role: "bot", Content: "Hi there!"},
-		{Role: "user", Content: "How are you?"},
+	expected := []*chat.ChatCompletionMessage{
+		{Role: chat.ChatMessageRoleUser, Content: "Hello"},
+		{Role: chat.ChatMessageRoleAssistant, Content: "Hi there!"},
+		{Role: chat.ChatMessageRoleUser, Content: "How are you?"},
 	}
 
 	actual := NormalizeMessages(msgs, "default")

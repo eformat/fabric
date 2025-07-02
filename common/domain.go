@@ -1,27 +1,35 @@
 package common
 
-type Message struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
-}
+import "github.com/danielmiessler/fabric/chat"
+
+const ChatMessageRoleMeta = "meta"
 
 type ChatRequest struct {
-	ContextName string
-	SessionName string
-	PatternName string
-	Message     string
+	ContextName      string
+	SessionName      string
+	PatternName      string
+	PatternVariables map[string]string
+	Message          *chat.ChatCompletionMessage
+	Language         string
+	Meta             string
+	InputHasVars     bool
+	StrategyName     string
 }
 
 type ChatOptions struct {
-	Model            string
-	Temperature      float64
-	TopP             float64
-	PresencePenalty  float64
-	FrequencyPenalty float64
+	Model              string
+	Temperature        float64
+	TopP               float64
+	PresencePenalty    float64
+	FrequencyPenalty   float64
+	Raw                bool
+	Seed               int
+	ModelContextLength int
+	MaxTokens          int
 }
 
 // NormalizeMessages remove empty messages and ensure messages order user-assist-user
-func NormalizeMessages(msgs []*Message, defaultUserMessage string) (ret []*Message) {
+func NormalizeMessages(msgs []*chat.ChatCompletionMessage, defaultUserMessage string) (ret []*chat.ChatCompletionMessage) {
 	// Iterate over messages to enforce the odd position rule for user messages
 	fullMessageIndex := 0
 	for _, message := range msgs {
@@ -31,8 +39,8 @@ func NormalizeMessages(msgs []*Message, defaultUserMessage string) (ret []*Messa
 		}
 
 		// Ensure, that each odd position shall be a user message
-		if fullMessageIndex%2 == 0 && message.Role != "user" {
-			ret = append(ret, &Message{Role: "user", Content: defaultUserMessage})
+		if fullMessageIndex%2 == 0 && message.Role != chat.ChatMessageRoleUser {
+			ret = append(ret, &chat.ChatCompletionMessage{Role: chat.ChatMessageRoleUser, Content: defaultUserMessage})
 			fullMessageIndex++
 		}
 		ret = append(ret, message)
